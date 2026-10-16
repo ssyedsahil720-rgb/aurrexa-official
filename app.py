@@ -20,7 +20,7 @@ if prompt:
     st.chat_message("user").write(prompt)
 
     response = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
+       model="llama-3.1-8b-instant",
         messages=st.session_state.messages
     )
     ans = response.choices[0].message.content
