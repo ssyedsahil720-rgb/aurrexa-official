@@ -3,140 +3,215 @@ from groq import Groq
 import urllib.parse
 from PIL import Image
 import PyPDF2
-import io
 
 st.set_page_config(page_title="AURREXA.AI", page_icon="💎", layout="centered")
 
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;800&display=swap');
-.stApp { background: #050507; font-family: 'Manrope', sans-serif; }
-[data-testid="stHeader"], footer, [data-testid="stSidebar"] { display: none; }
-.luxury-header {
-    background: linear-gradient(180deg, rgba(255,215,0,0.15), rgba(0,0,0,0.8));
-    border: 1px solid rgba(255,215,0,0.3);
-    border-radius: 22px; padding: 18px 22px;
-    display: flex; justify-content: space-between; align-items: center;
-    box-shadow: 0 0 40px rgba(255,215,0,0.15);
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
+.stApp { background: #08080A; font-family: 'Inter', sans-serif; }
+[data-testid="stHeader"], footer, [data-testid="stSidebar"],.stDeployButton { display: none; }
+
+.phone-frame {
+    background: linear-gradient(180deg, #121212 0%, #0A0A0A 100%);
+    border: 1px solid #2a2a2a;
+    border-radius: 32px;
+    padding: 0;
+    max-width: 420px;
+    margin: auto;
+    box-shadow: 0 0 0 4px #1a1a1a, 0 20px 60px rgba(0,0,0,0.8);
+    overflow: hidden;
 }
-.luxury-header h1 { color: #FFD700; font-weight: 800; letter-spacing: 2px; font-size: 26px; margin:0; }
-.glass-box {
-    background: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,215,0,0.06));
-    border: 1px solid rgba(255,215,0,0.25);
-    border-radius: 22px; padding: 15px 20px;
-    backdrop-filter: blur(20px);
+
+/* HEADER EXACT LIKE PHOTO */
+.chat-header {
+    padding: 18px 16px;
+    display: flex; align-items: center; gap: 12px;
+    background: #101010;
+    border-bottom: 1px solid rgba(255,215,0,0.15);
 }
-.gold-bubble {
-    background: linear-gradient(135deg, #d4af37, #b8962e);
-    color: #111; border-radius: 22px 22px 4px 22px;
-    padding: 14px 18px; margin: 10px 0 10px auto;
-    max-width: 85%; font-weight: 600; float: right; clear: both;
+.chat-header.logo {
+    width: 44px; height: 44px;
+    background: radial-gradient(circle at 30% 30%, #FFD700, #8a6d1b);
+    border-radius: 12px; display: flex; align-items: center; justify-content: center;
+    font-weight: 900; font-size: 28px; color: black;
+    box-shadow: 0 0 20px rgba(255,215,0,0.4);
 }
-[data-testid="stChatMessageAvatar"] { display: none!important; }
-div[data-testid="stChatMessage"] { background: transparent!important; border: none!important; padding: 0!important;}
-.stChatInput { background: #111!important; border: 1px solid rgba(255,215,0,0.3)!important; border-radius: 50px!important;}
+.chat-header h2 { color: white; font-size: 17px; margin:0; font-weight:700; }
+.chat-header p { color: #C9A86A; font-size: 12px; margin:0; }
+
+/* BUBBLES EXACT LIKE PHOTO */
+.user-bubble {
+    background: #1E1E1E;
+    border: 1px solid #3a3a3a;
+    color: white;
+    border-radius: 18px 18px 4px 18px;
+    padding: 12px 16px;
+    max-width: 82%;
+    margin: 14px 10px 14px auto;
+    font-size: 14.5px;
+    position: relative;
+}
+.ai-gold-bubble {
+    background: linear-gradient(135deg, #2a2210, #1a160a);
+    border: 1px solid rgba(255,215,0,0.4);
+    color: #ffe9a8;
+    border-radius: 18px 18px 18px 4px;
+    padding: 12px 16px;
+    max-width: 82%;
+    margin: 14px auto 14px 10px;
+    font-size: 14.5px;
+    box-shadow: 0 0 15px rgba(255,215,0,0.15), inset 0 1px 0 rgba(255,215,0,0.2);
+}
+.ai-list-bubble {
+    background: #1E1E1E;
+    border: 1px solid #2e2e2e;
+    color: #e5e5e5;
+    border-radius: 16px;
+    padding: 14px 16px;
+    max-width: 88%;
+    margin: 8px auto 8px 10px;
+    font-size: 13.5px;
+    line-height: 1.6;
+}
+
+/* BOTTOM BAR EXACT LIKE PHOTO */
+.bottom-bar {
+    position: sticky; bottom: 0;
+    background: #101010;
+    padding: 12px;
+    border-top: 1px solid #222;
+}
+.input-container {
+    background: #1A1A1A;
+    border: 1px solid #C9A86A;
+    border-radius: 30px;
+    display: flex; align-items: center;
+    padding: 6px 6px 6px 14px;
+}
+.input-container input {
+    background: transparent; border: none; color: white;
+    flex: 1; outline: none; font-size: 15px;
+}
+.icon-btn {
+    background: transparent; border: none;
+    color: #C9A86A; font-size: 22px; cursor: pointer;
+    padding: 6px 10px;
+}
+
+/* Hide default chat */
+[data-testid="stChatMessageAvatar"]{display:none!important;}
+div[data-testid="stChatMessage"]{background:transparent!important; border:none!important; padding:0!important;}
 </style>
 """, unsafe_allow_html=True)
 
-# API
 try:
     client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 except:
-    st.error("GROQ_API_KEY add kar Secrets me!")
+    st.error("API Key daal Secrets me")
     st.stop()
+
+if "messages" not in st.session_state:
+    st.session_state.messages = [{"role":"system","content":"You are AURREXA.AI Assistant, luxury, premium, helpful. Talk in Hinglish if needed."},
+                                 {"role":"user","content":"How can I automate my morning routine?"},
+                                 {"role":"assistant","content":"GOLD: I've created a Morning Routine for you ✨"},
+                                 {"role":"assistant","content":"LIST: • Brew coffee at 07:00 on weekdays\n• Play your Daily Briefing podcast\n• Adjust thermostat to 72°F\n• Show weather & calendar preview"},
+                                 {"role":"assistant","content":"GOLD: Would you like me to also add news briefing or adjust timing?"}]
+if "pdf_text" not in st.session_state: st.session_state.pdf_text = ""
+
+# PHONE FRAME START
+st.markdown('<div class="phone-frame">', unsafe_allow_html=True)
 
 # Header
 st.markdown("""
-<div class="luxury-header">
-    <div style="display:flex; align-items:center; gap:12px;">
-        <div style="width:42px; height:42px; background:linear-gradient(135deg,#FFD700,#b8962e); border-radius:10px; display:flex; align-items:center; justify-content:center;">💎</div>
-        <div><h1>AURREXA.AI</h1><p style="color:#a88a44; margin:0; font-size:11px;">PRO MAX • Image • PDF • Voice</p></div>
+<div class="chat-header">
+    <div style="color:#C9A86A; font-size:22px;">‹</div>
+    <div class="logo">A</div>
+    <div>
+        <h2>AURREXA Assistant</h2>
+        <p>Online • Powered by AURREXA.AI</p>
     </div>
-    <div style="color:#FFD700;">✨</div>
-</div><br>
+</div>
 """, unsafe_allow_html=True)
 
-# === NEW FEATURE: FILE + VOICE TABS ===
-tab1, tab2, tab3 = st.tabs(["💬 Chat", "📁 Files", "🎤 Voice"])
+# Chat display
+chat_placeholder = st.container()
+with chat_placeholder:
+    for msg in st.session_state.messages:
+        if msg["role"]=="system": continue
+        content = msg["content"]
+        if content.startswith("GOLD:"):
+            st.markdown(f'<div class="ai-gold-bubble">{content.replace("GOLD:","")}</div>', unsafe_allow_html=True)
+        elif content.startswith("LIST:"):
+            txt = content.replace("LIST:","").replace("\n","<br>")
+            st.markdown(f'<div class="ai-list-bubble">{txt}</div>', unsafe_allow_html=True)
+        elif msg["role"]=="user":
+            st.markdown(f'<div class="user-bubble">{content}<span style="float:right; font-size:11px; color:#888; margin-left:10px; margin-top:6px;">09:41</span></div>', unsafe_allow_html=True)
+        else:
+            if "image.pollinations.ai" in content: st.image(content)
+            else: st.markdown(f'<div class="ai-list-bubble">{content}</div>', unsafe_allow_html=True)
 
-with tab2:
-    st.markdown('<div class="glass-box"><span style="color:#FFD700;">Upload Image / PDF</span><br><span style="color:#aaa; font-size:13px;">AURREXA usko padh legi</span></div><br>', unsafe_allow_html=True)
-    uploaded = st.file_uploader("Choose file", type=["png","jpg","jpeg","pdf"])
-    if uploaded:
-        if uploaded.type == "application/pdf":
-            reader = PyPDF2.PdfReader(uploaded)
-            text = ""
-            for page in reader.pages[:5]: # first 5 pages
-                text += page.extract_text() + "\n"
-            st.success(f"PDF Read Ho Gaya! {len(reader.pages)} pages")
-            if st.button("Is PDF ke baare me pucho"):
+# === BOTTOM INPUT BAR WITH PLUS + MIC + SEND ===
+st.markdown('<div class="bottom-bar">', unsafe_allow_html=True)
+c1, c2, c3, c4 = st.columns([1, 6, 1, 1])
+
+with c1:
+    with st.popover("＋", use_container_width=True):
+        st.write("📎 Attach")
+        up_file = st.file_uploader("Photo / PDF", type=["png","jpg","jpeg","pdf"], label_visibility="collapsed")
+        if up_file:
+            if up_file.type == "application/pdf":
+                reader = PyPDF2.PdfReader(up_file)
+                text = "".join([p.extract_text() for p in reader.pages[:5]])
                 st.session_state.pdf_text = text[:8000]
-                st.info("Ab chat me puch - 'is pdf ko summarize kar'")
-        else:
-            img = Image.open(uploaded)
-            st.image(img, caption="Uploaded Image")
-            st.session_state.uploaded_image = uploaded
-            st.success("Image Upload Ho Gaya!")
+                st.success("PDF added!")
+            else:
+                st.image(Image.open(up_file))
+                st.success("Photo added!")
 
-with tab3:
-    st.markdown('<div class="glass-box"><span style="color:#FFD700;">Voice Mode</span><br><span style="color:#aaa; font-size:13px;">Bol ke puch!</span></div><br>', unsafe_allow_html=True)
-    audio = st.audio_input("Record your voice")
-    if audio:
-        # Transcribe with Groq Whisper
-        with st.spinner("Sun raha hu..."):
-            transcription = client.audio.transcriptions.create(
-                file=(audio.name, audio.getvalue()),
-                model="whisper-large-v3",
-                response_format="text"
-            )
-            st.success(f"Tune bola: {transcription}")
-            st.session_state.voice_prompt = transcription
+with c2:
+    user_input = st.text_input("input", placeholder="Ask AURREXA...", label_visibility="collapsed", key="input_text")
 
-# Chat History
-if "messages" not in st.session_state:
-    st.session_state.messages = [{"role":"system","content":"You are AURREXA.AI luxury AI by Syed Sahil. You can read PDFs, see images. Reply in cool Hinglish Gen-Z premium style. If user gave pdf_text, use it."}]
-if "pdf_text" not in st.session_state: st.session_state.pdf_text = ""
-if "voice_prompt" not in st.session_state: st.session_state.voice_prompt = ""
+with c3:
+    with st.popover("🎙️", use_container_width=True):
+        audio = st.audio_input("Voice", label_visibility="collapsed")
+        if audio:
+            trans = client.audio.transcriptions.create(file=(audio.name, audio.getvalue()), model="whisper-large-v3", response_format="text")
+            st.session_state.pending_voice = trans
+            st.success(trans)
 
-# Display chats
-for msg in st.session_state.messages:
-    if msg["role"]!="system":
-        if msg["role"]=="user":
-            st.markdown(f'<div class="gold-bubble">{msg["content"]}</div><div style="clear:both;"></div>', unsafe_allow_html=True)
-        else:
-            if "image.pollinations.ai" in msg["content"]: st.image(msg["content"])
-            else: st.markdown(f'<div class="glass-box"><span style="color:white;">{msg["content"]}</span></div>', unsafe_allow_html=True)
+with c4:
+    send = st.button("➤", use_container_width=True)
 
-# Handle voice prompt auto send
-prompt_to_send = None
-chat_prompt = st.chat_input("Ask AURREXA.AI...")
-if chat_prompt: prompt_to_send = chat_prompt
-elif st.session_state.voice_prompt:
-    prompt_to_send = st.session_state.voice_prompt
-    st.session_state.voice_prompt = ""
+st.markdown('<div style="text-align:center; color:#5a4a2a; font-size:11px; margin-top:8px;">AI can make mistakes. Verify important info.</div>', unsafe_allow_html=True)
+st.markdown('</div>', unsafe_allow_html=True) # bottom-bar end
+st.markdown('</div>', unsafe_allow_html=True) # phone-frame end
 
-if prompt_to_send:
-    # Add PDF context if available
-    final_content = prompt_to_send
-    if st.session_state.pdf_text:
-        final_content = f"PDF Content:\n{st.session_state.pdf_text}\n\nUser Question: {prompt_to_send}"
+# Logic for send
+final_prompt = None
+if send and user_input:
+    final_prompt = user_input
+elif "pending_voice" in st.session_state and st.session_state.pending_voice:
+    final_prompt = st.session_state.pending_voice
+    del st.session_state.pending_voice
 
-    st.session_state.messages.append({"role":"user","content":prompt_to_send})
-    st.markdown(f'<div class="gold-bubble">{prompt_to_send}</div><div style="clear:both;"></div>', unsafe_allow_html=True)
+if final_prompt:
+    st.session_state.messages.append({"role":"user","content":final_prompt})
 
-    if "/image" in prompt_to_send.lower():
-        clean = prompt_to_send.replace("/image","").strip() or "luxury ai"
+    if "/image" in final_prompt.lower():
+        clean = final_prompt.replace("/image","").strip() or "luxury"
         url = f"https://image.pollinations.ai/prompt/{urllib.parse.quote(clean)}?width=1024&height=1024&nologo=true&model=flux"
-        st.image(url)
         st.session_state.messages.append({"role":"assistant","content":url})
     else:
-        # Build messages for API
-        api_msgs = st.session_state.messages.copy()
+        api_msg = st.session_state.messages.copy()
         if st.session_state.pdf_text:
-            api_msgs[-1] = {"role":"user","content": final_content}
+            api_msg[-1] = {"role":"user","content":f"PDF:{st.session_state.pdf_text}\n\nQ:{final_prompt}"}
 
-        with st.spinner("✨"):
-            res = client.chat.completions.create(model="openai/gpt-oss-20b", messages=api_msgs)
-            ans = res.choices[0].message.content
-            st.markdown(f'<div class="glass-box"><span style="color:white;">{ans}</span></div>', unsafe_allow_html=True)
+        res = client.chat.completions.create(model="openai/gpt-oss-20b", messages=api_msg)
+        ans = res.choices[0].message.content
+        # Make it look luxury: if short, make GOLD bubble
+        if len(ans) < 150:
+            st.session_state.messages.append({"role":"assistant","content":f"GOLD: {ans}"})
+        else:
             st.session_state.messages.append({"role":"assistant","content":ans})
+    st.rerun()
